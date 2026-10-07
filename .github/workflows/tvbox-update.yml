@@ -1,0 +1,104 @@
+name: TVBox Self-Healing Source
+
+on:
+  schedule:
+    # 每 6 小时更新一次（错开整点，避免和一大堆定时任务撞车）
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tvbox-airport
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: 抓取并生成配置
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: 生成 TVBox 配置（探测 + 合并 + 自愈）
+        run: python tvbox_generator.py
+
+      - name: 校验产物
+        run: |
+          test -s tvbox.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = json.loads(Path("tvbox.json").read_text(encoding="utf-8"))
+          assert isinstance(d.get("sites"), list) and d["sites"], "sites 为空"
+          for s in d["sites"][:50]:
+              assert s.get("key") and s.get("name") and s.get("type"), f"站点字段缺失: {s}"
+              # csp_ 模块必须能找到解析 jar，否则站点点开会报"没有找到模块"
+              if not str(s.get("api","")).startswith(("http://","https://")):
+                  assert s.get("spider") or d.get("spider"), f"csp_ 站点缺 spider: {s}"
+              # 相对路径搬到本仓库必然 404
+              for k in ("api","ext","jar","spider"):
+                  v = s.get(k)
+                  assert not (isinstance(v,str) and v.startswith(".")), f"相对路径未修复: {k}={v}"
+          print(f"校验通过: 点播 {len(d['sites'])} 个 / 直播 {len(d.get('lives', []))} 个")
+          print("降级状态:", d.get("metadata", {}).get("degraded"))
+          PY
+
+      - name: 同步到 docs/ 供 Pages 使用
+        run: |
+          mkdir -p docs
+          cp tvbox.json docs/tvbox.json
+          touch docs/.nojekyll
+
+      - name: 提交变更
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tvbox.json STATUS.md docs/tvbox.json docs/.nojekyll
+          if git diff --cached --quiet; then
+            echo "内容无变化，跳过提交"
+          else
+            git commit -m "chore: 更新 TVBox 配置 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
+
+      - name: 输出订阅地址
+        run: |
+          echo "✅ 你的 TVBox 订阅地址（填进 App 的配置地址即可）:"
+          echo "   https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/tvbox.json"
+          echo "   https://raw.githubusercontent.com/${{ github.repository }}/main/tvbox.json"
+
+  pages:
+    name: 发布订阅页面
+    needs: update
+    runs-on: ubuntu-latest
+    # 仓库没开启 Pages 时不影响主流程（raw 订阅地址照样能用）
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 拉分支最新提交，确保拿到 update job 刚推上去的产物
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: 上传订阅文件
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
