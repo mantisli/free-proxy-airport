@@ -31,6 +31,9 @@ UA = {
         "(KHTML, like Gecko) Chrome/122.0 Safari/537.36 tvbox-airport/1.0"
     )
 }
+# 饭太硬/菜妮丝等家族源只对 okhttp UA 返回 JSON（Chrome UA 会返回 HTML 中间页），
+# 所以加一个回退 UA。TVBox 客户端本身就是 okhttp，用它最贴合真实场景。
+UA_OKHTTP = {"User-Agent": "okhttp/4.12.0"}
 
 TIMEOUT = 12
 MAX_WORKERS = 12
@@ -54,6 +57,7 @@ HELP_DOCS = [
 SEED_VOD = [
     "https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json",
     "http://home.jundie.top:81/top98.json",
+    "https://tv.xn--yhqu5zs87a.top",
 ]
 SEED_LIVE = [
     "https://live.zbds.top/tv/iptv4.m3u",
@@ -173,8 +177,34 @@ def mirror_candidates(url):
     ]
 
 
+def _looks_like_html(raw):
+    """判断响应是不是 HTML 页面（而非 JSON / m3u / 纯文本）。"""
+    head = raw[:400].lstrip().lower()
+    return head.startswith(b"<!doctype") or b"<html" in head or b"<head" in head
+
+
+def _fetch(target, timeout, want_text):
+    """单次抓取：主 UA 拿到 HTML 时自动用 okhttp UA 重试。
+
+    饭太硬/菜妮丝等家族源只对 okhttp UA 返回 JSON，Chrome UA 会拿到 HTML 中间页，
+    所以这里做一次 UA 回退，避免把「其实能用的源」误判成失效。
+    """
+    req = urllib.request.Request(sanitize_url(target), headers=UA)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        raw = resp.read()
+    if not raw.strip():
+        raise ValueError("空响应")
+    if want_text and _looks_like_html(raw):
+        req2 = urllib.request.Request(sanitize_url(target), headers=UA_OKHTTP)
+        with urllib.request.urlopen(req2, timeout=timeout) as resp2:
+            raw2 = resp2.read()
+        if raw2.strip() and not _looks_like_html(raw2):
+            raw = raw2
+    return raw
+
+
 def http_get(url, timeout=TIMEOUT, want_text=True, retries=1, use_mirror=True):
-    """直连 -> 重试 -> CDN 镜像回退。任一路径成功即返回。"""
+    """直连（含 UA 回退）-> 重试 -> CDN 镜像回退。任一路径成功即返回。"""
     attempts = []
     for attempt in range(retries + 1):
         attempts.append(url)
@@ -184,11 +214,7 @@ def http_get(url, timeout=TIMEOUT, want_text=True, retries=1, use_mirror=True):
     last = None
     for i, target in enumerate(attempts):
         try:
-            req = urllib.request.Request(sanitize_url(target), headers=UA)
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                raw = resp.read()
-            if not raw.strip():
-                raise ValueError("空响应")
+            raw = _fetch(target, timeout, want_text)
             break
         except Exception as exc:
             last = exc
@@ -311,8 +337,25 @@ def run_pool(fn, urls, label):
 # --------------------------------------------------------------------------
 # 合并
 # --------------------------------------------------------------------------
+def _puny_url(url):
+    """把 URL 里的中文域名转成 punycode（兼容老旧机顶盒的 DNS 解析）。"""
+    if not isinstance(url, str) or not url:
+        return url
+    try:
+        p = urllib.parse.urlsplit(url)
+        host = p.netloc.rsplit(":", 1)[0]
+        if any(ord(ch) > 127 for ch in host):
+            ph = host.encode("idna").decode("ascii")
+            port = ":" + p.netloc.rsplit(":", 1)[1] if ":" in p.netloc else ""
+            net = ph + port
+            return urllib.parse.urlunsplit((p.scheme, net, p.path, p.query, p.fragment))
+    except Exception:
+        pass
+    return url
+
+
 def absolutize(value, base_url):
-    """把配置里的相对路径（./jar/xxx.jar 之类）补成绝对地址。
+    """把配置里的相对路径（./jar/xxx.jar 之类）补成绝对地址 + 中文域名转 punycode。
 
     这是合并配置的关键：原配置托管在别人仓库里，jar/spider 用的是相对路径，
     直接搬到我们的仓库会 404，必须按「原配置 URL」为基准换算成绝对地址。
@@ -321,7 +364,11 @@ def absolutize(value, base_url):
         return value
     v = value.strip()
     if v.startswith(("http://", "https://", "assets://", "file://", "clan://", "ext://")):
-        return v
+        # 带 md5 校验后缀的 "https://xxx.jar;md5;xxxx" 只对 URL 部分转 punycode
+        if ";" in v:
+            head, tail = v.split(";", 1)
+            return _puny_url(head) + ";" + tail
+        return _puny_url(v)
     # 纯模块名（如 csp_Bili / csp_Drpy）不是路径，原样保留
     if re.fullmatch(r"[\w.\-]+", v):
         return v
@@ -338,29 +385,23 @@ def normalize_site(s, base_url, src_spider=""):
     name = s.get("name")
     typ = s.get("type")
     api = s.get("api")
-    if not key or not name or not typ or not api:
+    if not key or not name or typ is None or not api:
         return None
     if str(api).strip() in ("", "null", "None"):
         return None
-    out = {
-        "key": str(key),
-        "name": str(name),
-        "type": str(typ),
-        "api": absolutize(str(api), base_url),
-        "enabled": bool(s.get("enabled", True)),
-    }
-    # 只接受字符串型的 ext/jar/spider，个别源会塞 dict/list 进来，TVBox 解析不了
-    for k in ("ext", "jar", "spider", "style", "clickSelector", "categoriesSelector",
-              "titleSelector", "playSelector", "searchSelector"):
+    out = dict(s)  # 原样复制，保留 ext(dict) / type(数字) 等字段
+    out["key"] = str(key)
+    out["name"] = str(name)
+    out["api"] = absolutize(str(api), base_url)
+    # jar / spider：绝对化 + 中文域名转 punycode
+    for k in ("jar", "spider"):
         v = s.get(k)
         if isinstance(v, str) and v:
             out[k] = absolutize(v, base_url)
-        elif k == "playerType" and isinstance(v, (int, float)):
-            out[k] = v
     # 关键：csp_ 模块由对应源自己的 spider jar 提供。
     # 合并多源时若只留顶栏一个 jar，这些站会解析不到模块，所以给站点单独挂上它来源的 jar。
-    if not str(out["api"]).startswith(("http://", "https://")) and "spider" not in out:
-        if src_spider:
+    if not str(out["api"]).startswith(("http://", "https://")):
+        if not out.get("jar") and not out.get("spider"):
             out["spider"] = src_spider
     return out
 
