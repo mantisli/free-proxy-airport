@@ -883,13 +883,31 @@
       "extinf": 494
     },
     {
+      "name": "直播源 iptv4.m3u",
+      "type": "m3u",
+      "url": "https://live.hacks.tools/tv/iptv4.m3u",
+      "epg": "https://eepg.51zmt.top:8000/e.xml",
+      "group": "直播",
+      "playerType": 1,
+      "extinf": 493
+    },
+    {
+      "name": "直播源 m.json",
+      "type": "m3u",
+      "url": "https://raw.liucn.cc/box/m.json",
+      "epg": "https://eepg.51zmt.top:8000/e.xml",
+      "group": "直播",
+      "playerType": 1,
+      "extinf": 0
+    },
+    {
       "name": "全球直播源·多平台",
       "type": "m3u",
       "url": "https://live.yang-1989.eu.org/Live.m3u",
       "epg": "https://eepg.51zmt.top:8000/e.xml",
       "group": "直播",
       "playerType": 1,
-      "extinf": 703
+      "extinf": 403
     }
   ],
   "parses": [
@@ -1153,17 +1171,19 @@
   ],
   "flags": [],
   "metadata": {
-    "generated_at": "2026-10-14 17:09:50",
+    "generated_at": "2026-10-14 21:40:52",
     "generator": "tvbox-airport",
     "degraded": false,
     "degraded_reason": "",
     "vod_sources_ok": [
-      "http://home.jundie.top:81/top98.json",
-      "https://tv.xn--yhqu5zs87a.top"
+      "https://tv.xn--yhqu5zs87a.top",
+      "http://home.jundie.top:81/top98.json"
     ],
     "live_sources_ok": [
       "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
       "https://live.zbds.top/tv/iptv4.m3u",
+      "https://live.hacks.tools/tv/iptv4.m3u",
+      "https://raw.liucn.cc/box/m.json",
       "https://live.yang-1989.eu.org/Live.m3u"
     ]
   }
