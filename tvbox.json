@@ -788,6 +788,15 @@
       "extinf": 123
     },
     {
+      "name": "直播源 iptv4.m3u",
+      "type": "m3u",
+      "url": "https://live.hacks.tools/tv/iptv4.m3u",
+      "epg": "https://eepg.51zmt.top:8000/e.xml",
+      "group": "直播",
+      "playerType": 1,
+      "extinf": 529
+    },
+    {
       "name": "直播源 IPTV.m3u",
       "type": "m3u",
       "url": "https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u",
@@ -797,31 +806,22 @@
       "extinf": 96
     },
     {
-      "name": "直播源 m.json",
-      "type": "m3u",
-      "url": "https://raw.liucn.cc/box/m.json",
-      "epg": "https://eepg.51zmt.top:8000/e.xml",
-      "group": "直播",
-      "playerType": 1,
-      "extinf": 0
-    },
-    {
       "name": "央视卫视·IPv4(每6小时更新)",
       "type": "m3u",
       "url": "https://live.zbds.top/tv/iptv4.m3u",
       "epg": "https://eepg.51zmt.top:8000/e.xml",
       "group": "直播",
       "playerType": 1,
-      "extinf": 540
+      "extinf": 530
     },
     {
-      "name": "直播源 iptv4.m3u",
+      "name": "全球直播源·多平台",
       "type": "m3u",
-      "url": "https://live.hacks.tools/tv/iptv4.m3u",
+      "url": "https://live.yang-1989.eu.org/Live.m3u",
       "epg": "https://eepg.51zmt.top:8000/e.xml",
       "group": "直播",
       "playerType": 1,
-      "extinf": 533
+      "extinf": 651
     }
   ],
   "parses": [
@@ -1085,7 +1085,7 @@
   ],
   "flags": [],
   "metadata": {
-    "generated_at": "2026-10-16 04:31:25",
+    "generated_at": "2026-10-16 11:23:48",
     "generator": "tvbox-airport",
     "degraded": false,
     "degraded_reason": "",
@@ -1096,10 +1096,10 @@
     "live_sources_ok": [
       "https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u",
       "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
+      "https://live.hacks.tools/tv/iptv4.m3u",
       "https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u",
-      "https://raw.liucn.cc/box/m.json",
       "https://live.zbds.top/tv/iptv4.m3u",
-      "https://live.hacks.tools/tv/iptv4.m3u"
+      "https://live.yang-1989.eu.org/Live.m3u"
     ]
   }
 }
