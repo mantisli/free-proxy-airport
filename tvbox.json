@@ -779,22 +779,13 @@
       "extinf": 123
     },
     {
-      "name": "直播源 iptv.m3u",
+      "name": "直播源 m.json",
       "type": "m3u",
-      "url": "https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u",
+      "url": "https://raw.liucn.cc/box/m.json",
       "epg": "https://eepg.51zmt.top:8000/e.xml",
       "group": "直播",
       "playerType": 1,
-      "extinf": 120
-    },
-    {
-      "name": "直播源 IPTV.m3u",
-      "type": "m3u",
-      "url": "https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u",
-      "epg": "https://eepg.51zmt.top:8000/e.xml",
-      "group": "直播",
-      "playerType": 1,
-      "extinf": 96
+      "extinf": 0
     },
     {
       "name": "央视卫视·IPv4(每6小时更新)",
@@ -803,7 +794,16 @@
       "epg": "https://eepg.51zmt.top:8000/e.xml",
       "group": "直播",
       "playerType": 1,
-      "extinf": 497
+      "extinf": 528
+    },
+    {
+      "name": "直播源 iptv4.m3u",
+      "type": "m3u",
+      "url": "https://live.hacks.tools/tv/iptv4.m3u",
+      "epg": "https://eepg.51zmt.top:8000/e.xml",
+      "group": "直播",
+      "playerType": 1,
+      "extinf": 527
     },
     {
       "name": "全球直播源·多平台",
@@ -812,7 +812,7 @@
       "epg": "https://eepg.51zmt.top:8000/e.xml",
       "group": "直播",
       "playerType": 1,
-      "extinf": 483
+      "extinf": 629
     }
   ],
   "parses": [
@@ -1076,7 +1076,7 @@
   ],
   "flags": [],
   "metadata": {
-    "generated_at": "2026-10-18 04:33:00",
+    "generated_at": "2026-10-18 11:03:59",
     "generator": "tvbox-airport",
     "degraded": false,
     "degraded_reason": "",
@@ -1086,9 +1086,9 @@
     ],
     "live_sources_ok": [
       "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
-      "https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u",
-      "https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u",
+      "https://raw.liucn.cc/box/m.json",
       "https://live.zbds.top/tv/iptv4.m3u",
+      "https://live.hacks.tools/tv/iptv4.m3u",
       "https://live.yang-1989.eu.org/Live.m3u"
     ]
   }
